@@ -25,7 +25,7 @@ makedocs(;
     =#
     remotes=nothing,
     warnonly=:cross_references,
-    sitename="CTAppTemplate",
+    sitename="Diauxic Growth",
     format=Documenter.HTML(;
         repolink="https://" * repo_url,
         prettyurls=false,
