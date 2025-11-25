@@ -28,7 +28,7 @@ The controlled model is:
 \end{cases} \tag{S}
 ```
 
-### Problem Statement
+## Problem Statement
 
 The OCP writes:
 
@@ -60,15 +60,9 @@ using OptimalControl
 using NLPModelsIpopt
 using LaTeXStrings
 using Plots.PlotMeasures
-
 ```
 
 ```@example diauxic
-# Define parameters first
-k = 1
-KR = 0.003
-Kᵢ = 0.0003
-
 # Define uptake functions
 wm1(s) = k*s/(Kᵢ + s)
 wm2(s) = k*s/(Kᵢ + s)
@@ -118,6 +112,8 @@ end
 s₁₀, s₂₀, s₃₀, m₀, x₀ = 1e-3, 2e-3, 3e-3, 1e-3, 5e-3 
 t₀, tf = 0.0, 2.0
 Y₁, Y₂, Y₃ = 1.0, 0.5, 0.2
+# Define uptake parameters
+k, KR, Kᵢ = 1, 0.003, 0.0003
 I₀ = [s₁₀, s₂₀, s₃₀, m₀, x₀]
 
 # Solve the optimal control problem
@@ -128,20 +124,17 @@ sol = diauxci_ocp(t₀, tf, I₀, Y₁, Y₂, Y₃)
 
 ```@example diauxic
 function calculate_switching_times(sol, Y₁, Y₂, Y₃)
-    """
-    Calculate switching times based on when yield-weighted Michaelis-Menten functions
-    
-    Returns:
-    - arc1: Time when Y₁*wm1 = Y₂*wm2 
-    - arc2: Time when Y₂*wm2 = Y₃*wm3
-    """
-    arc1, arc2 = nothing, nothing
+	  
+    arc1, arc2, arcr1, arcr2 = nothing, nothing, nothing, nothing
     
     try 
         t = time_grid(sol)
         z = state(sol)
-        
-        # Get state values at each time point
+        u = control(sol)
+    
+	    # Evaluate controls at time points
+	    u0_vals = [u(t)[1] for t in t]
+	    # Get state values at each time point
         s1_vals = [z(ti)[1] for ti in t]
         s2_vals = [z(ti)[2] for ti in t]
         s3_vals = [z(ti)[3] for ti in t]
@@ -151,46 +144,64 @@ function calculate_switching_times(sol, Y₁, Y₂, Y₃)
         wm2_vals = [wm2(s2) for s2 in s2_vals]
         wm3_vals = [wm3(s3) for s3 in s3_vals]
         
-        # Find switching times where yield-weighted functions are equal
-        arc1_idx = findfirst((Y₁ .* wm1_vals .- Y₂ .* wm2_vals).^2 .< 1e-3)
-        arc2_idx = findfirst((Y₂ .* wm2_vals .- Y₃ .* wm3_vals).^2 .< 1e-3)
+        # Determine tolerance based on parameter values
+        if Y₁ ≈ 1.0 && Y₂ ≈ 0.3 && Y₃ ≈ 0.1
+            tol1 = 0.2e-5
+            tol2 = 0.3e-6
+			arcr1_idx = findfirst(u0_vals .< 0.9)
+        	arcr2_idx = findlast(u0_vals .< 0.9)
+
+        else
+            tol1 = 1e-3
+            tol2 = 1e-3
+			arcr1_idx = findfirst(u0_vals .> 0.1)
+        	arcr2_idx = findfirst(u0_vals .> 0.5)
+        end
         
-        arc1 = t[arc1_idx]
-        arc2 = t[arc2_idx]    
+        # Find switching times
+        arc1_idx = findfirst((Y₁ .* wm1_vals .- Y₂ .* wm2_vals).^2 .< tol1)
+        arc2_idx = findfirst((Y₂ .* wm2_vals .- Y₃ .* wm3_vals).^2 .< tol2)
+
+        
+        if arc1_idx !== nothing
+            arc1 = t[arc1_idx]
+        end
+        if arc2_idx !== nothing
+            arc2 = t[arc2_idx]
+        end
+        
+        if arcr1_idx !== nothing
+            arcr1 = t[arcr1_idx]
+			println("arcr1 =", arcr1)
+        end
+        if arcr2_idx !== nothing
+            arcr2 = t[arcr2_idx]
+			println("arcr2 =", arcr2)
+        end
     catch e
         println("Error in switching time calculation: ", e)
     end
     
-    return arc1, arc2
+    return arc1, arc2, arcr1, arcr2
 end
-
 # Calculate switching times for our solution
-arc1, arc2 = calculate_switching_times(sol, Y₁, Y₂, Y₃)
+arc1, arc2, arcr1, arcr2 = calculate_switching_times(sol, Y₁, Y₂, Y₃)
 ```
 
 ## State Variable Visualization
 
 ```@example diauxic
-function plot_state_variables(sol, t₀, tf)
-    """
-    Generate three separate plots for the state variables:
-    1. Substrates (s₁, s₂, s₃)
-    2. Metabolites (m)
-    3. Biomass (x)
-    
-    Returns a tuple of three plots: (substrates_plot, metabolites_plot, biomass_plot)
-    """
-    
+function plot_state_variables(sol, t₀, tf, arc1, arc2, arcr1, arcr2)    
     # Plot 1: Substrates
     substrates_plot = plot(
         t -> state(sol)(t)[3], 0, tf,
         label = L"$s_3$", color = "#79af97", lw = 3,
         grid = true,
-        gridlinewidth = 1.5,
+        gridlinewidth = 0.7,
         size = (400, 400),
         legendfontsize = 10,
         tickfontsize = 6,
-        guidefontsize = 10,
+        guidefontsize = 13,
         framestyle = :box,
         left_margin = 10mm,
         bottom_margin = 10mm,
@@ -206,15 +217,19 @@ function plot_state_variables(sol, t₀, tf)
         t -> state(sol)(t)[1], 0, tf,
         label = L"$s_1$", color = "#b24746", lw = 3
     )
+    vspan!(substrates_plot, [t₀, arcr1], fillalpha=0.2, fillcolor=:grey, label="")
+    vspan!(substrates_plot, [arcr2, tf], fillalpha=0.2, fillcolor=:grey, label="")
+    vline!(substrates_plot, [arc1], color=:grey, linestyle=:dash, linewidth=1, label="")
+    vline!(substrates_plot, [arc2], color=:grey, linestyle=:dash, linewidth=1, label="")
 
     # Plot 2: Metabolites
     metabolites_plot = plot(
         t -> state(sol)(t)[4], 0, tf,
         label = L"$m$", color = "#374e55", lw = 3,
         grid = true,
-        gridlinewidth = 1.5,
+        gridlinewidth = 0.7,
         size = (300, 300),
-        legendfontsize = 7,
+        legendfontsize = 10,
         tickfontsize = 10,
         guidefontsize = 13,
         framestyle = :box,
@@ -224,15 +239,18 @@ function plot_state_variables(sol, t₀, tf)
         xlabel = "t",
         ylabel = "metabolite"
     )
-
+    vline!(metabolites_plot, [arc1], color=:grey, linestyle=:dash, linewidth=1, label="")
+    vline!(metabolites_plot, [arc2], color=:grey, linestyle=:dash, linewidth=1, label="")
+    vspan!(metabolites_plot, [t₀, arcr1], fillalpha=0.2, fillcolor=:grey, label="")
+    vspan!(metabolites_plot, [arcr2, tf], fillalpha=0.2, fillcolor=:grey, label="")
     # Plot 3: Biomass
     biomass_plot = plot(
         t -> state(sol)(t)[5], 0, tf,
         label = L"$x$", color = "#374e55", lw = 3,
         grid = true,
-        gridlinewidth = 1.5,
+        gridlinewidth = 0.7,
         size = (300, 300),
-        legendfontsize = 7,
+        legendfontsize = 10,
         tickfontsize = 10,
         guidefontsize = 13,
         framestyle = :box,
@@ -243,12 +261,15 @@ function plot_state_variables(sol, t₀, tf)
         yformatter = :plain,
         ylabel = "biomass"
     )
-    
+	
+    vline!(biomass_plot, [arc1], color=:grey, linestyle=:dash, linewidth=1, label="")
+    vline!(biomass_plot, [arc2], color=:grey, linestyle=:dash, linewidth=1, label="")
+	vspan!(biomass_plot, [t₀, arcr1], fillalpha=0.2, fillcolor=:grey, label="")
+    vspan!(biomass_plot, [arcr2, tf], fillalpha=0.2, fillcolor=:grey, label="")
     return substrates_plot, metabolites_plot, biomass_plot
 end
-
-# Generate the three state variable plots
-substrates_plot, metabolites_plot, biomass_plot = plot_state_variables(sol, t₀, tf)
+# Generate the state variable plots
+substrates_plot, metabolites_plot, biomass_plot = plot_state_variables(sol, t₀, tf, arc1, arc2, arcr1, arcr2)
 ```
 ```@example diauxic
 substrates_plot
@@ -265,34 +286,17 @@ biomass_plot
 ## Control Analysis
 
 ```@example diauxic
-function plot_controls(sol, t₀, tf; arc1=nothing, arc2=nothing)
-    """
-    Plot optimal controls as stacked areas with switching time indicators
-    
-    Arguments:
-    - sol: Solution from optimal control problem
-    - t₀, tf: Time bounds
-    - arc1, arc2: Optional switching times to highlight with vertical lines
-    """
-    
+function plot_controls(sol, t₀, tf; arc1=nothing, arc2=nothing, arcr1=arcr1, arcr2=arcr2)
     # Extract time grid and control function
     t_vals = time_grid(sol)
     u = control(sol)
     
-    # Evaluate controls at time points
+    # # Evaluate controls at time points
     u0_vals = [u(t)[1] for t in t_vals]
     u1_vals = [u(t)[2] for t in t_vals]
     u2_vals = [u(t)[3] for t in t_vals] 
     u3_vals = [u(t)[4] for t in t_vals]
-    
-    # Find switching times 
-    arcr1_idx = findfirst(u0_vals .> 0.1)
-    arcr2_idx = findfirst(u0_vals .> 0.5)
-    
-    arcr1 = arcr1_idx !== nothing ? t_vals[arcr1_idx] : nothing
-    arcr2 = arcr2_idx !== nothing ? t_vals[arcr2_idx] : nothing
-				   
-    
+     
     p = plot(t_vals, u0_vals, 
          fillrange=0, fillalpha=0.6, fillcolor="#374e55",
          label=L"$u_0$", linewidth=0, 
@@ -344,9 +348,41 @@ function plot_controls(sol, t₀, tf; arc1=nothing, arc2=nothing)
 end
 
 # Plot the controls for our solution
-control_plot = plot_controls(sol, t₀, tf; arc1=arc1, arc2=arc2)
+control_plot = plot_controls(sol, t₀, tf; arc1=arc1, arc2=arc2, arcr1=arcr1, arcr2=arcr2)
 ```
 
+New parameter set for sensitivity analysis
+```@example diauxic
+k, KR, Kᵢ = 1, 0.3, 0.015
+s₁₀ = s₂₀ = s₃₀ = 1e-4
+Y₁, Y₂, Y₃ = 1.0, 0.3, 0.1
+m₀, x₀ = 0.1, 0.02
+t₀, tf = 0, 5
+
+I₀_new = [s₁₀, s₂₀, s₃₀, m₀, x₀]
+
+# Solve with new parameters
+sol2 = diauxci_ocp(t₀, tf, I₀_new, Y₁, Y₂, Y₃)
+```
+```@example diauxic
+# Calculate switching times for the new parameter set
+arc1_new, arc2_new, arcr1_new, arcr2_new = calculate_switching_times(sol2, Y₁, Y₂, Y₃)
+```
+
+```@example diauxic
+substrates_plot_bis, metabolites_plot_bis, biomass_plot_bis = plot_state_variables(sol2, t₀, tf, arc1_new, arc2_new, arcr1_new, arcr2_new)
+```
+```@example diauxic
+substrates_plot_bis
+```
+
+```@example diauxic
+metabolites_plot_bis
+```
+
+```@example diauxic
+biomass_plot_bis
+```
 ## References
 
 The mathematical models and optimal control strategies implemented in this documentation are based on the following research:
