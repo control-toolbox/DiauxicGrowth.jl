@@ -112,7 +112,7 @@ end
 s₁₀, s₂₀, s₃₀, m₀, x₀ = 1e-3, 2e-3, 3e-3, 1e-3, 5e-3 
 t₀, tf = 0.0, 2.0
 Y₁, Y₂, Y₃ = 1.0, 0.5, 0.2
-# Define uptake paramters
+# Define uptake paramaters
 k, KR, Kᵢ = 1, 0.003, 0.0003
 I₀ = [s₁₀, s₂₀, s₃₀, m₀, x₀]
 
