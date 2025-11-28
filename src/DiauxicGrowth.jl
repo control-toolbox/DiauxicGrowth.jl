@@ -1,4 +1,4 @@
-module CTAppTemplate
+module DiauxicGrowth
 
 greet() = print("Hello World!")
 
