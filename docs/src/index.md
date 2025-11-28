@@ -2,7 +2,7 @@
 
 ## Context
 
-This documentation reproduces the numerical results from Agustin G. Yabo's research on optimal control strategies for diauxic bacterial growth. The original work was implemented using BOCOP (optimal control solver), and here we present a Julia implementation using the `OptimalControl.jl` package.
+This documentation reproduces the numerical results from Agustin G. Yabo's research on optimal control strategies for diauxic bacterial growth. The original work was implemented using [BOCOP](https://github.com/control-toolbox/bocop) (optimal control solver), and here we present a Julia implementation using the [`OptimalControl.jl`](https://control-toolbox.org/OptimalControl.jl/stable) package.
 
 ## Mathematical Framework
 
@@ -105,6 +105,7 @@ function diauxci_ocp(t₀, tf, I₀, Y₁, Y₂, Y₃)
 
     return sol 
 end
+nothing # hide
 ```
 
 ```@example diauxic
@@ -118,13 +119,18 @@ I₀ = [s₁₀, s₂₀, s₃₀, m₀, x₀]
 
 # Solve the optimal control problem
 sol = diauxci_ocp(t₀, tf, I₀, Y₁, Y₂, Y₃)
+nothing # hide
+```
+
+```@example diauxic
+sol # hide
 ```
 
 ## Switching Time Analysis
 
 ```@example diauxic
 function calculate_switching_times(sol, Y₁, Y₂, Y₃)
-	  
+  
     arc1, arc2, arcr1, arcr2 = nothing, nothing, nothing, nothing
     
     try 
@@ -132,9 +138,9 @@ function calculate_switching_times(sol, Y₁, Y₂, Y₃)
         z = state(sol)
         u = control(sol)
     
-	    # Evaluate controls at time points
-	    u0_vals = [u(t)[1] for t in t]
-	    # Get state values at each time point
+        # Evaluate controls at time points
+        u0_vals = [u(t)[1] for t in t]
+        # Get state values at each time point
         s1_vals = [z(ti)[1] for ti in t]
         s2_vals = [z(ti)[2] for ti in t]
         s3_vals = [z(ti)[3] for ti in t]
@@ -148,21 +154,20 @@ function calculate_switching_times(sol, Y₁, Y₂, Y₃)
         if Y₁ ≈ 1.0 && Y₂ ≈ 0.3 && Y₃ ≈ 0.1
             tol1 = 0.2e-5
             tol2 = 0.3e-6
-			arcr1_idx = findfirst(u0_vals .< 0.9)
-        	arcr2_idx = findlast(u0_vals .< 0.9)
+            arcr1_idx = findfirst(u0_vals .< 0.9)
+            arcr2_idx = findlast(u0_vals .< 0.9)
 
         else
             tol1 = 1e-3
             tol2 = 1e-3
-			arcr1_idx = findfirst(u0_vals .> 0.1)
-        	arcr2_idx = findfirst(u0_vals .> 0.5)
+            arcr1_idx = findfirst(u0_vals .> 0.1)
+            arcr2_idx = findfirst(u0_vals .> 0.5)
         end
         
         # Find switching times
         arc1_idx = findfirst((Y₁ .* wm1_vals .- Y₂ .* wm2_vals).^2 .< tol1)
         arc2_idx = findfirst((Y₂ .* wm2_vals .- Y₃ .* wm3_vals).^2 .< tol2)
 
-        
         if arc1_idx !== nothing
             arc1 = t[arc1_idx]
         end
@@ -172,11 +177,11 @@ function calculate_switching_times(sol, Y₁, Y₂, Y₃)
         
         if arcr1_idx !== nothing
             arcr1 = t[arcr1_idx]
-			println("arcr1 =", arcr1)
+            println("arcr1 =", arcr1)
         end
         if arcr2_idx !== nothing
             arcr2 = t[arcr2_idx]
-			println("arcr2 =", arcr2)
+            println("arcr2 =", arcr2)
         end
     catch e
         println("Error in switching time calculation: ", e)
@@ -184,6 +189,7 @@ function calculate_switching_times(sol, Y₁, Y₂, Y₃)
     
     return arc1, arc2, arcr1, arcr2
 end
+
 # Calculate switching times for our solution
 arc1, arc2, arcr1, arcr2 = calculate_switching_times(sol, Y₁, Y₂, Y₃)
 ```
@@ -261,16 +267,19 @@ function plot_state_variables(sol, t₀, tf, arc1, arc2, arcr1, arcr2)
         yformatter = :plain,
         ylabel = "biomass"
     )
-	
+
     vline!(biomass_plot, [arc1], color=:grey, linestyle=:dash, linewidth=1, label="")
     vline!(biomass_plot, [arc2], color=:grey, linestyle=:dash, linewidth=1, label="")
-	vspan!(biomass_plot, [t₀, arcr1], fillalpha=0.2, fillcolor=:grey, label="")
+    vspan!(biomass_plot, [t₀, arcr1], fillalpha=0.2, fillcolor=:grey, label="")
     vspan!(biomass_plot, [arcr2, tf], fillalpha=0.2, fillcolor=:grey, label="")
     return substrates_plot, metabolites_plot, biomass_plot
 end
+
 # Generate the state variable plots
 substrates_plot, metabolites_plot, biomass_plot = plot_state_variables(sol, t₀, tf, arc1, arc2, arcr1, arcr2)
+nothing # hide
 ```
+
 ```@example diauxic
 substrates_plot
 ```
@@ -352,6 +361,7 @@ control_plot = plot_controls(sol, t₀, tf; arc1=arc1, arc2=arc2, arcr1=arcr1, a
 ```
 
 New parameter set for sensitivity analysis
+
 ```@example diauxic
 k, KR, Kᵢ = 1, 0.3, 0.015
 s₁₀ = s₂₀ = s₃₀ = 1e-4
@@ -363,7 +373,13 @@ I₀_new = [s₁₀, s₂₀, s₃₀, m₀, x₀]
 
 # Solve with new parameters
 sol2 = diauxci_ocp(t₀, tf, I₀_new, Y₁, Y₂, Y₃)
+nothing # hide
 ```
+
+```@example diauxic
+sol2 # hide
+```
+
 ```@example diauxic
 # Calculate switching times for the new parameter set
 arc1_new, arc2_new, arcr1_new, arcr2_new = calculate_switching_times(sol2, Y₁, Y₂, Y₃)
@@ -371,7 +387,9 @@ arc1_new, arc2_new, arcr1_new, arcr2_new = calculate_switching_times(sol2, Y₁,
 
 ```@example diauxic
 substrates_plot_bis, metabolites_plot_bis, biomass_plot_bis = plot_state_variables(sol2, t₀, tf, arc1_new, arc2_new, arcr1_new, arcr2_new)
+nothing # hide
 ```
+
 ```@example diauxic
 substrates_plot_bis
 ```
@@ -383,6 +401,7 @@ metabolites_plot_bis
 ```@example diauxic
 biomass_plot_bis
 ```
+
 ## References
 
 The mathematical models and optimal control strategies implemented in this documentation are based on the following research:
