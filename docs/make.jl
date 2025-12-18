@@ -30,14 +30,15 @@ makedocs(;
         repolink="https://" * repo_url,
         prettyurls=false,
         size_threshold_ignore=["index.md", "implementation.md"],
-        example_size_threshold = nothing,
+        example_size_threshold=nothing,
         assets=[
             asset("https://control-toolbox.org/assets/css/documentation.css"),
             asset("https://control-toolbox.org/assets/js/documentation.js"),
         ],
     ),
-    pages=["Introduction" => "index.md",
-    "Implementation and Results" => "implementation.md",],
+    pages=[
+        "Introduction" => "index.md", "Implementation and Results" => "implementation.md"
+    ],
 )
 
 deploydocs(; repo=repo_url * ".git", devbranch="main")
