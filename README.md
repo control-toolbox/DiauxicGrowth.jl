@@ -1,15 +1,10 @@
 # DiauxicGrowth.jl
 
-<!-- 
-For instructions on how to customize this README.template.md and use the centralized workflow,
-please see the user guide: https://github.com/orgs/control-toolbox/discussions/67
--->
-
 The DiauxicGrowth.jl repo is part of the [control-toolbox ecosystem](https://github.com/control-toolbox).
 
 | **Category** | **Badge** |
 |-----------------------|-----------|
-| **Documentation** | [![Stable Docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://control-toolbox.org/DiauxicGrowth.jl/stable/) [![Dev Docs](https://img.shields.io/badge/docs-dev-8A2BE2.svg)](https://control-toolbox.org/DiauxicGrowth.jl/dev/) |
+| **Documentation** | [![Stable Docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://agustinyabo.github.io/DiauxicGrowth.jl/stable/) [![Dev Docs](https://img.shields.io/badge/docs-dev-8A2BE2.svg)](https://agustinyabo.github.io/DiauxicGrowth.jl/dev/) |
 | **CI / Build** | [![Build Status](https://github.com/agustinyabo/DiauxicGrowth.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/agustinyabo/DiauxicGrowth.jl/actions/workflows/CI.yml?query=branch%3Amain) |
 | **Test Coverage** | [![Coverage](https://codecov.io/gh/agustinyabo/DiauxicGrowth.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/agustinyabo/DiauxicGrowth.jl) |
 | **Release / Version** | [![Release](https://img.shields.io/github/v/release/agustinyabo/DiauxicGrowth.jl.svg)](https://github.com/agustinyabo/DiauxicGrowth.jl/releases) |
