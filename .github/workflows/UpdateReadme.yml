@@ -34,7 +34,7 @@ jobs:
       output_file: README.md
       package_name: DiauxicGrowth                            # package for INSTALL.md
       repo_name: agustinyabo/DiauxicGrowth.jl            # repository for CONTRIBUTING.md links
-      doc_url: https://control-toolbox.org/DiauxicGrowth.jl
+      doc_url: https://agustinyabo.github.io/DiauxicGrowth.jl
       citation_badge: "[![DOI](https://zenodo.org/badge/541187171.svg)](https://zenodo.org/doi/10.5281/zenodo.16753152)" # example, can be empty
       assignee: "ocots"
     secrets: inherit
